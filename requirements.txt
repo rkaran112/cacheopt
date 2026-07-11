@@ -1,0 +1,12 @@
+duckdb>=1.0.0
+redis>=5.0.0
+sqlglot>=25.0.0
+numpy>=1.26.0
+matplotlib>=3.8.0
+pytest>=8.0.0
+
+# Optional, used only for the local/CI benchmark path when a real Redis
+# server / Docker daemon is not available. Production deployments should
+# point REDIS_HOST/REDIS_PORT at a real Redis instance (see docker-compose.yml).
+redislite>=6.2.912183
+fakeredis>=2.20.0
