@@ -1,12 +1,18 @@
 # Real distributed cache layer for local development / demo.
 #
-# Run:  docker compose up -d
-# Then: export REDIS_HOST=localhost REDIS_PORT=6379
+# Run:  export REDIS_PASSWORD=<something>; docker compose up -d
+# Then: export REDIS_HOST=localhost REDIS_PORT=6379 REDIS_PASSWORD=<same value>
+#
+# requirepass is mandatory here: this port is reachable by anything on the
+# host/network, and an unauthenticated Redis lets anyone read every cached
+# query result or write forged cache entries. REDIS_PASSWORD has no default
+# on purpose -- `docker compose up` fails loudly instead of silently running
+# without auth.
 #
 # The application code (src/cacheopt/cache/redis_cache.py) talks to Redis
 # purely over the standard redis-py TCP client, so swapping this for a
 # managed Redis cluster (ElastiCache, Memorystore, Redis Enterprise) in
-# production requires no code changes -- only REDIS_HOST/REDIS_PORT/REDIS_URL.
+# production requires no code changes -- only REDIS_HOST/REDIS_PORT/REDIS_URL/REDIS_PASSWORD.
 version: "3.8"
 services:
   redis:
@@ -14,11 +20,11 @@ services:
     container_name: cacheopt-redis
     ports:
       - "6379:6379"
-    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "512mb", "--maxmemory-policy", "allkeys-lru"]
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "512mb", "--maxmemory-policy", "allkeys-lru", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD must be set}"]
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD must be set}", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5

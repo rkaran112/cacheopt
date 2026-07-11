@@ -19,6 +19,9 @@ from __future__ import annotations
 
 import threading
 
+import sqlglot
+from sqlglot import exp
+
 from .cache.memory_buffer import MemoryBuffer
 from .cache.redis_cache import RedisCache
 from .cache.redis_client import get_redis_client
@@ -61,6 +64,19 @@ class QueryEngine:
         self.memory.invalidate_tables(tables, versions)
 
     def execute(self, sql: str) -> QueryResult:
+        # This is the boundary an untrusted caller (e.g. the API layer) hits
+        # with raw SQL text. Every downstream call -- EXPLAIN, the rewriter,
+        # the actual DuckDB execute -- treats `sql` as trusted, so a single
+        # read-only-SELECT check here is what keeps arbitrary DDL/DML/PRAGMA/
+        # ATTACH statements (or a stacked `; DROP TABLE ...`) out of the
+        # engine entirely, rather than relying on parameterization deep in
+        # duckdb_backend.py where there's no user-supplied parameter to bind.
+        try:
+            statements = sqlglot.parse(sql, read="duckdb")
+        except Exception as e:
+            raise ValueError(f"invalid SQL: {e}") from e
+        if len(statements) != 1 or not isinstance(statements[0], exp.Select):
+            raise ValueError("only a single read-only SELECT statement is allowed")
         return self.planner.execute(sql)
 
     def write(self, table: str, dml_sql: str):

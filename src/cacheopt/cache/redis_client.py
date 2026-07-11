@@ -25,29 +25,42 @@ from ..config import Config
 
 _lock = threading.Lock()
 _singleton = None
+_mode = None
 
 
 def get_redis_client(config: Config):
-    global _singleton
+    global _singleton, _mode
     with _lock:
         if _singleton is not None:
             return _singleton
         if config.redis_mode == "external":
             import redis
-            _singleton = redis.Redis(host=config.redis_host, port=config.redis_port, db=config.redis_db)
+            _singleton = redis.Redis(
+                host=config.redis_host, port=config.redis_port, db=config.redis_db,
+                password=config.redis_password,
+            )
         else:
             from redislite import Redis as RedisLite
             _singleton = RedisLite(config.redis_rdb_path)
+        _mode = config.redis_mode
         return _singleton
 
 
 def reset_client():
-    """Test helper: drop the cached singleton (e.g. between test modules)."""
-    global _singleton
+    """Test helper: drop the cached singleton (e.g. between test modules).
+
+    Only issues SHUTDOWN for "embedded" mode, where this process owns a
+    throwaway redis-server child it started. In "external" mode the client
+    points at a shared server (Docker/managed Redis) other processes and
+    developers rely on -- SHUTDOWN there would kill that shared instance out
+    from under everyone, not just reset this process's connection.
+    """
+    global _singleton, _mode
     with _lock:
-        if _singleton is not None:
+        if _singleton is not None and _mode == "embedded":
             try:
                 _singleton.shutdown()
             except Exception:
                 pass
         _singleton = None
+        _mode = None

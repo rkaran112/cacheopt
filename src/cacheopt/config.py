@@ -25,6 +25,9 @@ class Config:
     redis_host: str = os.environ.get("REDIS_HOST", "localhost")
     redis_port: int = int(os.environ.get("REDIS_PORT", "6379"))
     redis_db: int = int(os.environ.get("REDIS_DB", "0"))
+    # No default: an unauthenticated Redis on a network-reachable port lets
+    # anyone read cached results or write forged cache entries.
+    redis_password: str | None = os.environ.get("REDIS_PASSWORD") or None
     # When true (default outside of explicit prod config), use an embedded
     # real Redis server (via redislite) so the whole system runs standalone
     # without requiring Docker. Set CACHEOPT_REDIS_MODE=external to talk to
