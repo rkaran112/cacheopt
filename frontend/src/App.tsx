@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from './api';
 import type { NodeStats, QueryResponse, SampleQuery } from './api';
 import { SignalPath } from './SignalPath';
+import { BenchmarkChart, LatencyChart, TierDistribution } from './Charts';
 import './App.css';
 
 export default function App() {
@@ -88,6 +89,10 @@ export default function App() {
             faster it lands once the result is warm.
           </p>
           <SignalPath result={result} pending={pending} runId={runId} />
+        </section>
+
+        <section className="proof">
+          <BenchmarkChart />
         </section>
 
         <section className="console" aria-label="query console">
@@ -184,19 +189,8 @@ export default function App() {
         </section>
 
         <section className="side">
-          {history.length > 0 && (
-            <div className="panel">
-              <h2 className="panel__title">Recent runs</h2>
-              <ul className="history">
-                {history.map((h, i) => (
-                  <li key={i} className={`history__item history__item--${h.tier}`}>
-                    <span className="history__tier">{h.tier.replace('_', ' ')}</span>
-                    <span className="history__ms">{h.ms.toFixed(2)} ms</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <LatencyChart points={history} />
+          <TierDistribution points={history} />
 
           {stats && (
             <div className="panel">

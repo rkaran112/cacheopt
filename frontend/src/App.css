@@ -108,6 +108,11 @@
   margin: 0 0 24px;
 }
 
+.proof {
+  grid-column: 1 / -1;
+  margin-bottom: 8px;
+}
+
 .console {
   grid-column: 1 / 2;
   display: flex;
@@ -336,49 +341,6 @@
   letter-spacing: 0.06em;
   color: var(--text-faint);
   margin: 0 0 12px;
-  font-weight: 600;
-}
-
-.history {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.history__item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-family: var(--mono);
-  font-size: 12px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  background: var(--bg-inset);
-  border-left: 2px solid var(--text-faint);
-}
-
-.history__item--L1_MEMORY {
-  border-left-color: var(--amber);
-}
-.history__item--L2_REDIS {
-  border-left-color: var(--cyan);
-}
-.history__item--MISS {
-  border-left-color: var(--violet);
-}
-
-.history__tier {
-  color: var(--text-dim);
-  font-size: 10.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.history__ms {
-  color: var(--text);
   font-weight: 600;
 }
 
