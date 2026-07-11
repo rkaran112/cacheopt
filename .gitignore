@@ -7,3 +7,4 @@ node_modules/
 frontend/dist/
 benchmarks/results/
 .env.local
+.gstack/
