@@ -1,0 +1,24 @@
+# API image: FastAPI + the cacheopt engine. Boots a small demo dataset on
+# first run if none is mounted, then serves the 3-node EngineCluster over HTTP.
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY scripts/ scripts/
+COPY src/ src/
+COPY docker/api-entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+ENV CACHEOPT_DUCKDB_PATH=/app/data/warehouse.duckdb
+VOLUME ["/app/data"]
+
+EXPOSE 8000
+
+ENTRYPOINT ["/app/entrypoint.sh"]

@@ -1,0 +1,11 @@
+.venv/
+data/
+benchmarks/results/
+frontend/
+tests/
+.git/
+.gitignore
+.env.local
+*.pyc
+__pycache__/
+.pytest_cache/

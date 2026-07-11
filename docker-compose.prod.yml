@@ -1,0 +1,63 @@
+# Full deployable stack: redis + api + frontend, all on one box.
+#
+# Setup:
+#   export REDIS_PASSWORD=$(openssl rand -hex 24)
+#   export CACHEOPT_PUBLIC_API_URL=https://api.yourdomain.com   # or http://<vps-ip>:8000
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# This is deliberately a single-box deployment (matches the project's own
+# honest scope -- see README) rather than a Kubernetes manifest: DuckDB is a
+# single-file embedded store, so there is no multi-node storage layer to
+# orchestrate. Redis + API + static frontend fit comfortably on one small VPS.
+version: "3.8"
+
+services:
+  redis:
+    image: redis:7.2-alpine
+    container_name: cacheopt-redis
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "512mb", "--maxmemory-policy", "allkeys-lru", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD must be set}"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD must be set}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: cacheopt-api
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      CACHEOPT_REDIS_MODE: external
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+      CACHEOPT_DATASET_ROWS: ${CACHEOPT_DATASET_ROWS:-500000}
+      CACHEOPT_FRONTEND_ORIGIN: ${CACHEOPT_FRONTEND_ORIGIN:-http://localhost}
+    volumes:
+      - api-data:/app/data
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE: ${CACHEOPT_PUBLIC_API_URL:-http://localhost:8000}
+    container_name: cacheopt-frontend
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  api-data:

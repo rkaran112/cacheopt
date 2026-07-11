@@ -131,6 +131,46 @@ Both stages replay the *identical* workload (same random seed), so the
 comparison is apples-to-apples: query #k is the exact same SQL text in both
 runs.
 
+## Live dashboard
+
+`src/cacheopt/api/app.py` (FastAPI) and `frontend/` (Vite + React) turn the
+engine into something you can actually watch work: type a query, see which
+cache tier answers it and how fast, re-run it and watch it land warm.
+
+Local dev:
+
+```bash
+pip install -r requirements.txt   # now includes fastapi + uvicorn
+export CACHEOPT_REDIS_MODE=external REDIS_HOST=localhost REDIS_PORT=6379 REDIS_PASSWORD=<your password>
+uvicorn cacheopt.api.app:app --app-dir src --reload   # API on :8000
+
+cd frontend && npm install && npm run dev             # UI on :5173
+```
+
+`QueryEngine.execute()` enforces read-only single `SELECT` statements at the
+engine boundary (see `engine.py`) — this is the one place in the project that
+accepts SQL from an untrusted caller, so it's also where the guard lives.
+
+## Deploying
+
+One VPS, three containers (Redis, API, static frontend via nginx) — matches
+the project's actual scope (DuckDB is a single embedded file, so there's no
+multi-node storage tier to orchestrate):
+
+```bash
+export REDIS_PASSWORD=$(openssl rand -hex 24)
+export CACHEOPT_PUBLIC_API_URL=https://api.yourdomain.com   # or http://<vps-ip>:8000
+export CACHEOPT_FRONTEND_ORIGIN=https://yourdomain.com      # or http://<vps-ip>
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+The API container generates its demo dataset on first boot
+(`CACHEOPT_DATASET_ROWS`, default 500k rows — large enough that the
+tier-routing story is real, small enough to boot in seconds) into a named
+volume, so it persists across restarts and isn't regenerated every deploy.
+Put a reverse proxy (Caddy/nginx/Cloudflare Tunnel) in front for TLS; the
+containers themselves speak plain HTTP on `:8000` and `:80`.
+
 ## Honest limitations
 
 - The numbers above were measured on a constrained sandbox (2 vCPU, ~3GB
