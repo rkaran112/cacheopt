@@ -1,4 +1,8 @@
-const BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000';
+// VITE_API_BASE may be a full URL (local dev) or a bare hostname (Render's
+// fromService injects the API service host with no scheme) — normalize to a
+// full https:// origin in the latter case.
+const RAW_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000';
+const BASE = /^https?:\/\//.test(RAW_BASE) ? RAW_BASE : `https://${RAW_BASE}`;
 
 export type TierHit = 'L1_MEMORY' | 'L2_REDIS' | 'MISS';
 

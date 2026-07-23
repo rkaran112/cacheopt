@@ -1,0 +1,32 @@
+{
+  "n_queries": 1000,
+  "p_hot": 0.88,
+  "baseline": {
+    "mean_ms": 31.950994884988177,
+    "p50_ms": 6.609838999793283,
+    "p95_ms": 126.23625599917432,
+    "p99_ms": 213.2361280000623
+  },
+  "optimized": {
+    "mean_ms": 11.64466926602472,
+    "p50_ms": 8.594773998993332,
+    "p95_ms": 31.21106599974155,
+    "p99_ms": 89.85250999830896
+  },
+  "repeat_workload": {
+    "n_repeat_queries": 893,
+    "baseline_mean_ms": 30.678968752513818,
+    "optimized_mean_ms": 8.928590147843758,
+    "latency_reduction_pct": 70.89670705729914
+  },
+  "cache_tier_distribution": {
+    "MISS": 221,
+    "L2_REDIS": 69,
+    "L1_MEMORY": 710
+  },
+  "rewrite_rule_activations": {
+    "constant_fold": 1000,
+    "rollup_rewrite": 105
+  },
+  "overall_speedup_x": 2.7438301728509003
+}

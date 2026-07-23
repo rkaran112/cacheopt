@@ -1,0 +1,68 @@
+# Render Blueprint — one-click deploy of the full cacheopt demo.
+#
+#   Redis (Render Key Value)  ->  API (FastAPI + engine, Docker)  ->  static React frontend
+#
+# Deploy: push this repo to GitHub, then in the Render dashboard choose
+# "New +" -> "Blueprint", pick this repo, and Render provisions all three
+# services from this file. Everything below runs on Render's free plans; see
+# the notes on each service for how to make the API always-on.
+services:
+  # --- L2 cache: managed Redis, internal-only (no public endpoint) ---
+  - type: keyvalue
+    name: cacheopt-redis
+    plan: free
+    region: oregon
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []          # empty = reachable only from other Render services
+
+  # --- API: FastAPI wrapping the 3-node EngineCluster ---
+  # Built from Dockerfile.api. The entrypoint generates a small demo DuckDB
+  # warehouse on first boot (free plan has ephemeral disk, so this regenerates
+  # on each cold start — kept small enough to boot in a few seconds).
+  - type: web
+    name: cacheopt-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile.api
+    plan: free               # bump to "starter" to keep it warm (no 15-min spin-down)
+    region: oregon
+    healthCheckPath: /api/health
+    envVars:
+      - key: CACHEOPT_REDIS_MODE
+        value: external
+      - key: REDIS_HOST
+        fromService:
+          type: keyvalue
+          name: cacheopt-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: keyvalue
+          name: cacheopt-redis
+          property: port
+      - key: CACHEOPT_DATASET_ROWS
+        value: "200000"      # demo dataset size; larger = slower cold boot
+      # CORS: no cookies/credentials are used (allow_credentials=False in the
+      # API), so a wildcard origin is safe here and avoids a build-order
+      # dependency on the frontend's URL.
+      - key: CACHEOPT_FRONTEND_ORIGIN
+        value: "*"
+
+  # --- Frontend: static React build on Render's CDN (free, never spins down) ---
+  - type: web
+    name: cacheopt-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      # Baked into the JS bundle at build time; api.ts prepends https:// to
+      # this bare hostname.
+      - key: VITE_API_BASE
+        fromService:
+          type: web
+          name: cacheopt-api
+          property: host
+    routes:
+      - type: rewrite       # SPA fallback
+        source: /*
+        destination: /index.html
