@@ -55,13 +55,13 @@ services:
     buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
     envVars:
-      # Baked into the JS bundle at build time; api.ts prepends https:// to
-      # this bare hostname.
+      # Baked into the JS bundle at build time. Must be the API's full public
+      # origin. (Render's `fromService … property: host` injects only the bare
+      # service name, e.g. "cacheopt-api", which is not browser-resolvable — so
+      # set the literal onrender.com URL here. If you rename the API service or
+      # attach a custom domain, update this value.)
       - key: VITE_API_BASE
-        fromService:
-          type: web
-          name: cacheopt-api
-          property: host
+        value: https://cacheopt-api.onrender.com
     routes:
       - type: rewrite       # SPA fallback
         source: /*
