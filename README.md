@@ -30,14 +30,6 @@ steps and per-tier latency shown for each run — is deployable in one click.
 > inactivity, so the first request after idle takes ~30–60s to cold-start and
 > regenerate its demo dataset. Subsequent queries are instant.
 
-### Deploy your own (Render)
-
-This repo ships a [`render.yaml`](render.yaml) Blueprint that provisions the
-whole stack (managed Redis + the API + the static frontend) from a single git
-push. In the [Render](https://render.com) dashboard: **New + → Blueprint →**
-pick this repo. No manual env wiring — the services discover each other via
-the Blueprint. To make the API always-on (no cold start), change the API
-service's `plan: free` to `plan: starter` in `render.yaml`.
 
 ## Measured results (reproducible — see [Running the benchmark](#running-the-benchmark))
 
