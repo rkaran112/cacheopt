@@ -64,6 +64,13 @@ class QueryRequest(BaseModel):
     sql: str
 
 
+def _routing_key(sql: str) -> str:
+    """Whitespace/case-normalized SQL, so that re-running the same query
+    (identical modulo formatting) routes to the same node and keeps hitting
+    its warm L1 buffer -- see EngineCluster.route()."""
+    return " ".join(sql.split()).lower()
+
+
 app = FastAPI(title="cacheopt API")
 
 app.add_middleware(
@@ -114,7 +121,7 @@ def samples():
 @app.post("/api/query")
 def run_query(req: QueryRequest):
     cluster = _cluster_or_503()
-    node = cluster.route()
+    node = cluster.route(key=_routing_key(req.sql))
     t0 = time.perf_counter()
     try:
         result = node.execute(req.sql)

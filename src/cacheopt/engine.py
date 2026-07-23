@@ -17,6 +17,7 @@ cache-aware.
 """
 from __future__ import annotations
 
+import hashlib
 import threading
 
 import sqlglot
@@ -122,8 +123,23 @@ class EngineCluster:
         for node in self.nodes:
             node.calibrate(tables[0])
 
-    def route(self) -> QueryEngine:
-        """Round-robin node selection, simulating a load balancer."""
+    def route(self, key: str | None = None) -> QueryEngine:
+        """Select a node for a query.
+
+        With no ``key``, round-robins like a plain load balancer -- used by
+        the benchmark, whose high-volume workload warms every node's L1
+        anyway.
+
+        With a ``key`` (e.g. a query fingerprint), routes deterministically
+        so repeats of the same query always land on the same node and keep
+        hitting *that* node's warm L1 buffer. This is the "cache-aware" half
+        of cache-aware routing: a real fleet fronts its cache with
+        affinity/consistent-hash routing for exactly this reason, and it's
+        what makes L1 warm-up visible under low-volume interactive traffic
+        (round-robin would scatter each repeat to a different, cold node)."""
+        if key is not None:
+            idx = int(hashlib.md5(key.encode("utf-8")).hexdigest(), 16) % len(self.nodes)
+            return self.nodes[idx]
         with self._rr_lock:
             node = self.nodes[self._rr_index % len(self.nodes)]
             self._rr_index += 1
